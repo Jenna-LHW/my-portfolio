@@ -478,7 +478,6 @@ const HomePage = ({ setCurrentPage, profile }) => {
 };
 
 // About Page
-// About Page - With Bootstrap Icons and Tagline
 const AboutPage = ({ profile }) => {
   const { isDark } = useTheme();
   const [activeSection, setActiveSection] = useState('experience');
@@ -509,13 +508,13 @@ const getSkillIcon = (skillName) => {
   const iconMap = {
     // Frontend
     'React': 'bi-react',
-    'Next.js': 'bi-bootstrap', // placeholder for Next.js
+    'Next.js': 'bi-bootstrap', 
     'JavaScript': 'bi-braces',
     'HTML': 'bi-filetype-html',
-    'CSS': 'bi-filetype-css', // ✅ this one exists, just make sure you’re on latest bootstrap-icons version
+    'CSS': 'bi-filetype-css', 
 
     // Backend
-    'Python': 'bi-terminal', // ✅ fallback since no python icon in bootstrap-icons
+    'Python': 'bi-terminal', 
     'Django': 'bi-server',
     'Java': 'bi-cup-hot',
     'PHP': 'bi-filetype-php',
@@ -534,8 +533,8 @@ const getSkillIcon = (skillName) => {
     'VS Code': 'bi-window',
     'Figma': 'bi-palette',
 
-    // Default fallback (tech-related)
-    'default': 'bi-code-slash' // 💻 developer-style fallback
+    // Default fallback
+    'default': 'bi-code-slash' 
   };
 
   return iconMap[skillName] || iconMap['default'];
@@ -696,19 +695,35 @@ const getSkillIcon = (skillName) => {
 const ProjectsPage = ({ onSelectProject }) => {
   const { isDark } = useTheme();
   const [projects, setProjects] = useState([]);
+  const [filteredProjects, setFilteredProjects] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [activeFilter, setActiveFilter] = useState('all');
 
   useEffect(() => {
     fetchProjects();
   }, []);
 
+  useEffect(() => {
+    filterProjects();
+  }, [activeFilter, projects]);
+
   const fetchProjects = async () => {
     try {
       const { data } = await supabase.from('projects').select('*').order('created_at', { ascending: false });
       setProjects(data || []);
+      setFilteredProjects(data || []);
       setLoading(false);
     } catch (error) {
       setLoading(false);
+    }
+  };
+
+  const filterProjects = () => {
+    if (activeFilter === 'all') {
+      setFilteredProjects(projects);
+    } else {
+      const filtered = projects.filter(project => project.status === activeFilter);
+      setFilteredProjects(filtered);
     }
   };
 
@@ -716,7 +731,7 @@ const ProjectsPage = ({ onSelectProject }) => {
     if (project.status === 'completed') return 'COMPLETED';
     if (project.status === 'in-progress') return 'IN PROGRESS';
     if (project.status === 'planning') return 'PLANNING';
-    return 'IN PROGRESS'; // default
+    return 'IN PROGRESS';
   };
 
   const getStatusColor = (status) => {
@@ -724,6 +739,31 @@ const ProjectsPage = ({ onSelectProject }) => {
     if (status === 'IN PROGRESS') return 'text-yellow-500';
     if (status === 'PLANNING') return 'text-blue-500';
     return 'text-yellow-500';
+  };
+
+  const getProjectCount = (filter) => {
+    if (filter === 'all') return projects.length;
+    return projects.filter(p => p.status === filter).length;
+  };
+
+  const filters = [
+    { id: 'all', label: 'All Projects', color: 'pink' },
+    { id: 'completed', label: 'Completed', color: 'green' },
+    { id: 'in-progress', label: 'In Progress', color: 'yellow' },
+    { id: 'planning', label: 'Planning', color: 'blue' }
+  ];
+
+  const getFilterButtonStyle = (filter) => {
+    const isActive = activeFilter === filter.id;
+    
+    if (isActive) {
+      if (filter.color === 'pink') return isDark ? 'bg-pink-500 text-white' : 'bg-pink-600 text-white';
+      if (filter.color === 'green') return isDark ? 'bg-green-500 text-white' : 'bg-green-600 text-white';
+      if (filter.color === 'yellow') return isDark ? 'bg-yellow-500 text-white' : 'bg-yellow-600 text-white';
+      if (filter.color === 'blue') return isDark ? 'bg-blue-500 text-white' : 'bg-blue-600 text-white';
+    }
+    
+    return isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-pink-50 shadow-md';
   };
   
   return (
@@ -736,13 +776,43 @@ const ProjectsPage = ({ onSelectProject }) => {
           </p>
         </div>
 
+        {/* Filter Buttons */}
+        <div className="mb-8 flex flex-wrap gap-3">
+          {filters.map((filter) => (
+            <button
+              key={filter.id}
+              onClick={() => setActiveFilter(filter.id)}
+              className={`px-6 py-3 rounded-lg font-medium transition-all hover:scale-105 ${getFilterButtonStyle(filter)}`}
+            >
+              {filter.label}
+              <span className={`ml-2 px-2 py-0.5 rounded-full text-xs font-bold ${
+                activeFilter === filter.id 
+                  ? 'bg-white/20' 
+                  : isDark ? 'bg-gray-700' : 'bg-gray-200'
+              }`}>
+                {getProjectCount(filter.id)}
+              </span>
+            </button>
+          ))}
+        </div>
+
         {loading ? (
           <div className="text-center py-12">
             <div className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Loading...</div>
           </div>
+        ) : filteredProjects.length === 0 ? (
+          <div className="text-center py-20">
+            <div className={`text-6xl mb-4`}>📁</div>
+            <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              No projects found
+            </h3>
+            <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Try selecting a different filter
+            </p>
+          </div>
         ) : (
           <div className="grid md:grid-cols-2 gap-6">
-            {projects.map((project) => (
+            {filteredProjects.map((project) => (
               <div 
                 key={project.id} 
                 className={`rounded-2xl overflow-hidden transition-all hover:scale-[1.02] cursor-pointer ${
@@ -816,18 +886,20 @@ const ProjectDetailPage = ({ project, onBack }) => {
   const { isDark } = useTheme();
 
   const getStatusBadge = () => {
-    return project.is_featured ? 'COMPLETED' : 'IN PROGRESS';
+    if (project.status === 'completed') return 'COMPLETED';
+    if (project.status === 'in-progress') return 'IN PROGRESS';
+    if (project.status === 'planning') return 'PLANNING';
+    return 'IN PROGRESS'; // default
   };
 
   const getStatusColor = (status) => {
-    if (status === 'COMPLETED') return 'bg-green-500';
-    if (status === 'IN PROGRESS') return 'bg-yellow-500';
-    if (status === 'PLANNING') return 'bg-blue-500';
-    return 'bg-yellow-500';
+    if (status === 'COMPLETED') return 'text-green-500';
+    if (status === 'IN PROGRESS') return 'text-yellow-500';
+    if (status === 'PLANNING') return 'text-blue-500';
+    return 'text-yellow-500';
   };
 
   const formatDate = () => {
-    // Format the created_at date
     if (project.created_at) {
       const date = new Date(project.created_at);
       return date.toLocaleDateString('en-US', { month: 'long', year: 'numeric' });
@@ -915,35 +987,74 @@ const ProjectDetailPage = ({ project, onBack }) => {
               <h3 className={`text-xl font-bold mb-4 ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>
                 Project Links
               </h3>
-              <div className="space-y-3">
-                {project.link && (
-                  <>
+              
+              {project.link ? (
+                <div className="space-y-3">
+                  <a 
+                    href={project.link} 
+                    target="_blank" 
+                    rel="noopener noreferrer"
+                    className={`w-full py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                      isDark 
+                        ? 'bg-pink-500 hover:bg-pink-600 text-white' 
+                        : 'bg-pink-600 hover:bg-pink-700 text-white'
+                    }`}
+                  >
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
+                    </svg>
+                    View Live Demo
+                  </a>
+                  {project.github_url ? (
                     <a 
-                      href={project.link} 
+                      href={project.github_url} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className={`w-full py-3 px-4 rounded-lg font-medium transition-all flex items-center justify-center gap-2 ${
+                      className={`w-full py-3 px-4 rounded-lg font-medium transition-all border-2 flex items-center justify-center gap-2 ${
                         isDark 
-                          ? 'bg-pink-500 hover:bg-pink-600 text-white' 
-                          : 'bg-pink-600 hover:bg-pink-700 text-white'
+                          ? 'border-pink-500 text-pink-400 hover:bg-pink-500/10' 
+                          : 'border-pink-600 text-pink-600 hover:bg-pink-50'
                       }`}
                     >
-                      <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14" />
-                      </svg>
-                      View Live Demo
-                    </a>
-                    <button className={`w-full py-3 px-4 rounded-lg font-medium transition-all border-2 flex items-center justify-center gap-2 ${
-                      isDark 
-                        ? 'border-pink-500 text-pink-400 hover:bg-pink-500/10' 
-                        : 'border-pink-600 text-pink-600 hover:bg-pink-50'
-                    }`}>
                       <Github className="w-5 h-5" />
                       View Source Code
-                    </button>
-                  </>
-                )}
-              </div>
+                    </a>
+                  ) : (
+                    <div className={`w-full py-3 px-4 rounded-lg border-2 flex items-center justify-center gap-2 opacity-50 cursor-not-allowed ${
+                      isDark ? 'border-gray-700 text-gray-500' : 'border-gray-300 text-gray-400'
+                    }`}>
+                      <Github className="w-5 h-5" />
+                      Source Code Private
+                    </div>
+                  )}
+                  <button className={`w-full py-3 px-4 rounded-lg font-medium transition-all border-2 flex items-center justify-center gap-2 ${
+                    isDark 
+                      ? 'border-pink-500 text-pink-400 hover:bg-pink-500/10' 
+                      : 'border-pink-600 text-pink-600 hover:bg-pink-50'
+                  }`}>
+                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
+                    </svg>
+                    Share Project
+                  </button>
+                </div>
+              ) : (
+                <div className="text-center py-8">
+                  <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+                    isDark ? 'bg-gray-700' : 'bg-gray-100'
+                  }`}>
+                    <svg className={`w-8 h-8 ${isDark ? 'text-gray-400' : 'text-gray-500'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 15v2m-6 4h12a2 2 0 002-2v-6a2 2 0 00-2-2H6a2 2 0 00-2 2v6a2 2 0 002 2zm10-10V7a4 4 0 00-8 0v4h8z" />
+                    </svg>
+                  </div>
+                  <h4 className={`text-lg font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    Private Project
+                  </h4>
+                  <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                    This project is not publicly available yet
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Technologies Used */}
@@ -1508,7 +1619,13 @@ const AdminPage = () => {
                 onChange={(e) => setFormData({...formData, link: e.target.value})} 
                 className={`w-full px-4 py-3 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-pink-200 text-gray-900'}`} 
               />
-              
+              <input 
+                type="text" 
+                placeholder="GitHub Repository URL" 
+                value={formData.github_url || ''} 
+                onChange={(e) => setFormData({...formData, github_url: e.target.value})} 
+                className={`w-full px-4 py-3 rounded-lg border ${isDark ? 'bg-gray-700 border-gray-600 text-white' : 'bg-white border-pink-200 text-gray-900'}`} 
+              />                      
               {/* Status Dropdown */}
               <div>
                 <label className={`block mb-2 font-medium ${isDark ? 'text-white' : 'text-gray-900'}`}>Project Status</label>
