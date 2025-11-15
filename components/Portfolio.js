@@ -80,9 +80,9 @@ const useAuth = () => {
 const Navigation = ({ currentPage, setCurrentPage, isAdmin, logout }) => {
   const [isOpen, setIsOpen] = useState(false);
   const { isDark, toggleTheme } = useTheme();
-  const navItems = ['Home', 'About', 'Projects', 'Blog', 'Contact', 'Admin'];
-  // const navItems = ['Home', 'About', 'Projects', 'Blog', 'Contact'];
-  // if (isAdmin) navItems.push('Admin');
+  // const navItems = ['Home', 'About', 'Projects', 'Blog', 'Contact', 'Admin'];
+  const navItems = ['Home', 'About', 'Projects', 'Blog', 'Contact'];
+  if (isAdmin) navItems.push('Admin');
   
   return (
     <nav className={`fixed w-full top-0 z-50 backdrop-blur-md ${isDark ? 'bg-gray-900/90 border-gray-800' : 'bg-white/90 border-pink-100'} border-b`}>
@@ -1854,6 +1854,19 @@ const App = () => {
 
   useEffect(() => {
     fetchProfile();
+  }, []);
+
+  useEffect(() => {
+    const handleKeydown = (e) => {
+      console.log("Pressed:", e.key, "ctrl:", e.ctrlKey); // DEBUG
+      if (e.ctrlKey && e.key === '.') {
+        setCurrentPage('Admin');
+        e.preventDefault();
+      }
+    };
+
+    window.addEventListener('keydown', handleKeydown);
+    return () => window.removeEventListener('keydown', handleKeydown);
   }, []);
 
   const fetchProfile = async () => {
