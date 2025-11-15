@@ -1159,6 +1159,8 @@ const ContactPage = () => {
   const { isDark } = useTheme();
   const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
   const [profile, setProfile] = useState(null);
+  const [toast, setToast] = useState(null);
+  const [sending, setSending] = useState(false);
   
   useEffect(() => {
     fetchProfile();
@@ -1173,9 +1175,50 @@ const ContactPage = () => {
     }
   };
 
-  const handleSubmit = () => {
-    alert('Message sent! (Demo - integrate email service later)');
-    setFormData({ name: '', email: '', subject: '', message: '' });
+  const handleSubmit = async () => {
+    // Validation
+    if (!formData.name || !formData.email || !formData.message) {
+      setToast({ message: 'Please fill in all required fields', type: 'error' });
+      return;
+    }
+
+    setSending(true);
+
+    try {
+      // Step 1: Save to Supabase database
+      const { error: dbError } = await supabase
+        .from('contact_messages')
+        .insert([{
+          name: formData.name,
+          email: formData.email,
+          subject: formData.subject || 'No subject',
+          message: formData.message
+        }]);
+      
+      if (dbError) {
+        console.error('Database error:', dbError);
+        throw new Error('Failed to save message');
+      }
+      
+      // Step 2: Send email notification
+      const emailResponse = await fetch('/api/contact', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(formData)
+      });
+      
+      if (!emailResponse.ok) {
+        console.error('Email sending failed');
+      }
+      
+      setToast({ message: 'Message sent successfully! I\'ll get back to you soon.', type: 'success' });
+      setFormData({ name: '', email: '', subject: '', message: '' });
+    } catch (error) {
+      console.error('Error:', error);
+      setToast({ message: 'Error sending message. Please try again.', type: 'error' });
+    } finally {
+      setSending(false);
+    }
   };
 
   const handleDirectEmail = () => {
@@ -1184,6 +1227,8 @@ const ContactPage = () => {
   
   return (
     <div className={`min-h-screen pt-16 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-pink-50 via-white to-pink-100'}`}>
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
+      
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
         {/* Header */}
         <div className="text-center mb-16">
@@ -1203,7 +1248,7 @@ const ContactPage = () => {
                 {/* Name and Email Row */}
                 <div className="grid md:grid-cols-2 gap-6">
                   <div>
-                    <label className={`block mb-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Name</label>
+                    <label className={`block mb-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Name *</label>
                     <input
                       type="text"
                       placeholder="Your Name"
@@ -1215,10 +1260,11 @@ const ContactPage = () => {
                           : 'bg-white/50 border-pink-200 text-gray-900 placeholder-gray-500'
                       }`}
                       required
+                      disabled={sending}
                     />
                   </div>
                   <div>
-                    <label className={`block mb-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email</label>
+                    <label className={`block mb-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Email *</label>
                     <input
                       type="email"
                       placeholder="Your Email"
@@ -1230,6 +1276,7 @@ const ContactPage = () => {
                           : 'bg-white/50 border-pink-200 text-gray-900 placeholder-gray-500'
                       }`}
                       required
+                      disabled={sending}
                     />
                   </div>
                 </div>
@@ -1247,13 +1294,13 @@ const ContactPage = () => {
                         ? 'bg-gray-700/50 border-gray-600 text-white placeholder-gray-400' 
                         : 'bg-white/50 border-pink-200 text-gray-900 placeholder-gray-500'
                     }`}
-                    required
+                    disabled={sending}
                   />
                 </div>
 
                 {/* Message */}
                 <div>
-                  <label className={`block mb-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Message</label>
+                  <label className={`block mb-2 font-medium ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Message *</label>
                   <textarea
                     placeholder="Your Message"
                     value={formData.message}
@@ -1265,19 +1312,21 @@ const ContactPage = () => {
                         : 'bg-white/50 border-pink-200 text-gray-900 placeholder-gray-500'
                     }`}
                     required
+                    disabled={sending}
                   ></textarea>
                 </div>
 
                 {/* Submit Button */}
                 <button
                   onClick={handleSubmit}
-                  className={`w-full py-4 rounded-lg font-medium transition-all transform hover:scale-[1.02] ${
+                  disabled={sending}
+                  className={`w-full py-4 rounded-lg font-medium transition-all transform hover:scale-[1.02] disabled:opacity-50 disabled:cursor-not-allowed ${
                     isDark 
                       ? 'bg-pink-500 hover:bg-pink-600 text-white shadow-lg shadow-pink-500/50' 
                       : 'bg-pink-600 hover:bg-pink-700 text-white shadow-lg shadow-pink-600/30'
                   }`}
                 >
-                  Send Message
+                  {sending ? 'Sending...' : 'Send Message'}
                 </button>
               </div>
             </div>
