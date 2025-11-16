@@ -618,10 +618,11 @@ const getSkillIcon = (skillName) => {
                               <div className={`w-3 h-3 rounded-full mt-2 flex-shrink-0 ${isDark ? 'bg-pink-400' : 'bg-pink-600'}`}></div>
                               <div className="flex-1">
                                 <p className={`text-sm mb-2 ${isDark ? 'text-pink-400' : 'text-pink-600'} font-medium`}>{exp.period}</p>
-                                <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{exp.title}</h3>
-                                <p className={`text-sm mb-3 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>• {exp.company}</p>
+                                <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{exp.title} - {exp.company}</h3>
                                 {exp.description && (
-                                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{exp.description}</p>
+                                  <p className={`text-sm ${isDark ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
+                                    {exp.description}
+                                  </p>
                                 )}
                               </div>
                             </div>
@@ -960,13 +961,6 @@ const ProjectDetailPage = ({ project, onBack }) => {
               </div>
             </div>
 
-            {/* Project Description */}
-            <div className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800/50' : 'bg-white/80 shadow-lg'}`}>
-              <p className={`text-lg leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                {project.description}
-              </p>
-            </div>
-
             {/* About This Project */}
             {project.description && (
               <div className={`p-6 rounded-2xl ${isDark ? 'bg-gray-800/50' : 'bg-white/80 shadow-lg'}`}>
@@ -1027,16 +1021,6 @@ const ProjectDetailPage = ({ project, onBack }) => {
                       Source Code Private
                     </div>
                   )}
-                  <button className={`w-full py-3 px-4 rounded-lg font-medium transition-all border-2 flex items-center justify-center gap-2 ${
-                    isDark 
-                      ? 'border-pink-500 text-pink-400 hover:bg-pink-500/10' 
-                      : 'border-pink-600 text-pink-600 hover:bg-pink-50'
-                  }`}>
-                    <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
-                    </svg>
-                    Share Project
-                  </button>
                 </div>
               ) : (
                 <div className="text-center py-8">
@@ -1835,7 +1819,105 @@ const AdminPage = () => {
     </div>
   );
 };
+const Footer = ({ profile, setCurrentPage }) => {
+  const { isDark } = useTheme();
+  const currentYear = new Date().getFullYear();
 
+  const socialLinks = [
+    { Icon: Github, url: profile?.github, label: 'GitHub' },
+    { Icon: Linkedin, url: profile?.linkedin, label: 'LinkedIn' },
+    { Icon: Twitter, url: profile?.twitter, label: 'Twitter' },
+    { Icon: Mail, url: profile?.email ? `mailto:${profile.email}` : '', label: 'Email' }
+  ].filter(link => link.url);
+
+  const quickLinks = [
+    { label: 'Home', page: 'Home' },
+    { label: 'About', page: 'About' },
+    { label: 'Projects', page: 'Projects' },
+    { label: 'Blog', page: 'Blog' },
+    { label: 'Contact', page: 'Contact' }
+  ];
+  const handleNavigation = (page) => {
+    setCurrentPage(page);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  return (
+    <footer className={`border-t ${isDark ? 'bg-gray-900 border-gray-800' : 'bg-white border-pink-100'}`}>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-12">
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+          {/* About Section */}
+          <div>
+            <h3 className={`text-xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {profile?.name || 'Your Name'}
+            </h3>
+            <p className={`text-sm mb-4 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              {profile?.title || 'Full Stack Developer & Designer'}
+            </p>
+            <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              “It's fine to celebrate success but it is more important to heed the lessons of failure.”
+            </p>
+            <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-500'}`}>
+              Bill Gates, Co-founder of Microsoft
+            </p>
+          </div>
+
+          {/* Quick Links */}
+          <div>
+            <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Quick Links
+            </h3>
+            <ul className="space-y-2">
+              {quickLinks.map((link) => (
+                <li key={link.page}>
+                  <button
+                    onClick={() => handleNavigation(link.page)}
+                    className={`text-sm transition-colors ${isDark ? 'text-gray-400 hover:text-pink-400' : 'text-gray-600 hover:text-pink-600'}`}
+                  >
+                    {link.label}
+                  </button>
+                </li>
+              ))}
+            </ul>
+          </div>
+
+          {/* Connect */}
+          <div>
+            <h3 className={`text-lg font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              Connect
+            </h3>
+            <div className="flex gap-4">
+              {socialLinks.map(({ Icon, url, label }) => (
+                <a
+                  key={label}
+                  href={url}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  aria-label={label}
+                  className={`p-3 rounded-lg transition-all hover:scale-110 ${isDark ? 'bg-gray-800 hover:bg-gray-700 text-gray-400 hover:text-pink-400' : 'bg-pink-50 hover:bg-pink-100 text-gray-600 hover:text-pink-600'}`}
+                >
+                  <Icon className="w-5 h-5" />
+                </a>
+              ))}
+            </div>
+          </div>
+        </div>
+
+        {/* Bottom Bar */}
+        <div className={`pt-8 border-t ${isDark ? 'border-gray-800' : 'border-pink-100'}`}>
+          <div className="flex flex-col md:flex-row justify-between items-center gap-4">
+            <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+              © {currentYear} {profile?.name || 'Your Name'}. All rights reserved.
+            </p>
+            <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
+              Built with Next.js, react & Supabase
+            </p>
+          </div>
+        </div>
+      </div>
+    </footer>
+  );
+};
 // Main App Component
 const App = () => {
   const [currentPage, setCurrentPage] = useState('Home');
@@ -1916,6 +1998,7 @@ const App = () => {
         <Navigation currentPage={currentPage} setCurrentPage={setCurrentPage} isAdmin={isAdmin} logout={() => { signOut(); setCurrentPage('Home'); }} />
         {renderPage()}
       </div>
+      <Footer profile={profile} setCurrentPage={setCurrentPage} />
     </ThemeProvider>
   );
 };
