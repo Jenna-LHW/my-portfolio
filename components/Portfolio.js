@@ -459,7 +459,9 @@ const HomePage = ({ setCurrentPage, profile }) => {
                         <div className={`h-40 rounded-xl mb-4 ${isDark ? 'bg-gradient-to-br from-pink-500 to-purple-600' : 'bg-gradient-to-br from-pink-400 to-pink-600'}`}></div>
                       )}
                       <h3 className={`text-xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>{project.title}</h3>
-                      <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{project.description}</p>
+                      <p className={`text-sm mb-4 line-clamp-2 ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                        {project.description}
+                      </p>
                       <div className="flex flex-wrap gap-2">
                         {project.tech && project.tech.map((t, j) => (
                           <span key={j} className={`px-3 py-1 rounded-full text-sm ${isDark ? 'bg-gray-700 text-pink-400' : 'bg-pink-100 text-pink-600'}`}>{t}</span>
@@ -967,9 +969,14 @@ const ProjectDetailPage = ({ project, onBack }) => {
                 <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
                   About This Project
                 </h2>
-                <p className={`text-lg leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                  {project.description}
-                </p>
+                <div className={`text-lg ${isDark ? 'text-gray-300' : 'text-gray-600'} whitespace-pre-line`}>
+                  {project.description.split('•').filter(item => item.trim()).map((item, idx) => (
+                    <div key={idx} className="flex gap-2 mb-3">
+                      {idx > 0 && <span>•</span>}
+                      <span className="leading-relaxed">{item.trim()}</span>
+                    </div>
+                  ))}
+                </div>
               </div>
             )}
           </div>
