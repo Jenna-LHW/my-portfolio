@@ -1118,28 +1118,488 @@ const BlogPage = ({ onSelectPost }) => {
   );
 };
 
+// Like Modal Component
+const LikeModal = ({ onClose, onSubmit, isDark }) => {
+  const [name, setName] = useState('');
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    if (!name.trim()) return;
+    
+    setSubmitting(true);
+    await onSubmit(name.trim());
+    setSubmitting(false);
+  };
+
+  return (
+    <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4" onClick={onClose}>
+      <div 
+        className={`max-w-md w-full rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white'}`}
+        onClick={(e) => e.stopPropagation()}
+      >
+        <div className="text-center mb-6">
+          <div className={`w-16 h-16 mx-auto mb-4 rounded-full flex items-center justify-center ${
+            isDark ? 'bg-pink-500/20' : 'bg-pink-50'
+          }`}>
+            <svg className={`w-8 h-8 ${isDark ? 'text-pink-400' : 'text-pink-600'}`} fill="currentColor" viewBox="0 0 20 20">
+              <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+            </svg>
+          </div>
+          <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            Like this post?
+          </h3>
+          <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+            Let me know you enjoyed it by leaving your name
+          </p>
+        </div>
+        
+        <form onSubmit={handleSubmit}>
+          <input
+            type="text"
+            placeholder="Your name"
+            value={name}
+            onChange={(e) => setName(e.target.value)}
+            className={`w-full px-4 py-3 rounded-lg border mb-4 ${
+              isDark 
+                ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' 
+                : 'bg-white border-pink-200 text-gray-900 placeholder-gray-500'
+            }`}
+            autoFocus
+            disabled={submitting}
+          />
+          
+          <div className="flex gap-3">
+            <button
+              type="submit"
+              disabled={!name.trim() || submitting}
+              className={`flex-1 py-3 rounded-lg font-medium transition-all disabled:opacity-50 disabled:cursor-not-allowed ${
+                isDark 
+                  ? 'bg-pink-500 hover:bg-pink-600 text-white' 
+                  : 'bg-pink-600 hover:bg-pink-700 text-white'
+              }`}
+            >
+              {submitting ? 'Submitting...' : 'Submit'}
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              disabled={submitting}
+              className={`flex-1 py-3 rounded-lg font-medium transition-all ${
+                isDark 
+                  ? 'bg-gray-700 hover:bg-gray-600 text-white' 
+                  : 'bg-gray-200 hover:bg-gray-300 text-gray-900'
+              }`}
+            >
+              Cancel
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
+};
+
 // Blog Post Detail Page
 const BlogPostPage = ({ post, onBack }) => {
   const { isDark } = useTheme();
+  const [readingTime, setReadingTime] = useState(0);
+  const [progress, setProgress] = useState(0);
+  const [likeCount, setLikeCount] = useState(0);
+  const [hasLiked, setHasLiked] = useState(false);
+  const [showLikeModal, setShowLikeModal] = useState(false);
+  const [toast, setToast] = useState(null);
+
+  useEffect(() => {
+    // Calculate reading time (average 200 words per minute)
+    const words = post.content?.split(/\s+/).length || 0;
+    const time = Math.ceil(words / 200);
+    setReadingTime(time);
+
+    // Track scroll progress
+    const handleScroll = () => {
+      const windowHeight = window.innerHeight;
+      const documentHeight = document.documentElement.scrollHeight - windowHeight;
+      const scrolled = window.scrollY;
+      const progress = (scrolled / documentHeight) * 100;
+      setProgress(progress);
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    
+    // Fetch like count
+    fetchLikeCount();
+    
+    // Check if user has already liked (using localStorage)
+    const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+    setHasLiked(likedPosts.includes(post.id));
+    
+    return () => window.removeEventListener('scroll', handleScroll);
+  }, [post]);
+
+  const fetchLikeCount = async () => {
+    try {
+      const { count } = await supabase
+        .from('blog_likes')
+        .select('*', { count: 'exact', head: true })
+        .eq('post_id', post.id);
+      
+      setLikeCount(count || 0);
+    } catch (error) {
+      console.error('Error fetching likes:', error);
+    }
+  };
+
+  const handleLikeClick = () => {
+    if (hasLiked) {
+      setToast({ message: 'You already liked this post!', type: 'info' });
+      return;
+    }
+    setShowLikeModal(true);
+  };
+
+  const handleLikeSubmit = async (name) => {
+    try {
+      const { error } = await supabase
+        .from('blog_likes')
+        .insert([{
+          post_id: post.id,
+          user_name: name
+        }]);
+      
+      if (error) throw error;
+      
+      // Update local state
+      setLikeCount(prev => prev + 1);
+      setHasLiked(true);
+      
+      // Save to localStorage
+      const likedPosts = JSON.parse(localStorage.getItem('likedPosts') || '[]');
+      likedPosts.push(post.id);
+      localStorage.setItem('likedPosts', JSON.stringify(likedPosts));
+      
+      setShowLikeModal(false);
+      setToast({ message: 'Thanks for liking this post! ❤️', type: 'success' });
+    } catch (error) {
+      console.error('Error submitting like:', error);
+      setToast({ message: 'Error submitting like. Please try again.', type: 'error' });
+    }
+  };
+
+  // Parse content with markdown-style formatting
+  const parseContent = (content) => {
+    if (!content) return [];
+    
+    const lines = content.split('\n');
+    const sections = [];
+    let currentSection = { type: 'paragraph', content: [] };
+    
+    lines.forEach((line, index) => {
+      const trimmedLine = line.trim();
+      
+      // Main heading (##)
+      if (trimmedLine.startsWith('## ')) {
+        if (currentSection.content.length > 0) {
+          sections.push(currentSection);
+        }
+        sections.push({
+          type: 'heading',
+          content: trimmedLine.replace('## ', '')
+        });
+        currentSection = { type: 'paragraph', content: [] };
+      }
+      // Subheading (###)
+      else if (trimmedLine.startsWith('### ')) {
+        if (currentSection.content.length > 0) {
+          sections.push(currentSection);
+        }
+        sections.push({
+          type: 'subheading',
+          content: trimmedLine.replace('### ', '')
+        });
+        currentSection = { type: 'paragraph', content: [] };
+      }
+      // Bullet point (- or •)
+      else if (trimmedLine.startsWith('- ') || trimmedLine.startsWith('• ')) {
+        if (currentSection.type !== 'list') {
+          if (currentSection.content.length > 0) {
+            sections.push(currentSection);
+          }
+          currentSection = { type: 'list', content: [] };
+        }
+        currentSection.content.push(trimmedLine.replace(/^[•-]\s*/, ''));
+      }
+      // Quote (>)
+      else if (trimmedLine.startsWith('> ')) {
+        if (currentSection.content.length > 0) {
+          sections.push(currentSection);
+        }
+        sections.push({
+          type: 'quote',
+          content: trimmedLine.replace('> ', '')
+        });
+        currentSection = { type: 'paragraph', content: [] };
+      }
+      // Code block (```)
+      else if (trimmedLine.startsWith('```')) {
+        if (currentSection.type === 'code') {
+          sections.push(currentSection);
+          currentSection = { type: 'paragraph', content: [] };
+        } else {
+          if (currentSection.content.length > 0) {
+            sections.push(currentSection);
+          }
+          currentSection = { type: 'code', content: [] };
+        }
+      }
+      // Empty line - end current section
+      else if (trimmedLine === '') {
+        if (currentSection.content.length > 0) {
+          sections.push(currentSection);
+          currentSection = { type: 'paragraph', content: [] };
+        }
+      }
+      // Regular text
+      else {
+        if (currentSection.type === 'code') {
+          currentSection.content.push(line);
+        } else {
+          currentSection.content.push(trimmedLine);
+        }
+      }
+    });
+    
+    if (currentSection.content.length > 0) {
+      sections.push(currentSection);
+    }
+    
+    return sections;
+  };
+
+  const sections = parseContent(post.content);
   
   return (
     <div className={`min-h-screen pt-16 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-pink-50 via-white to-pink-100'}`}>
+      {/* Reading Progress Bar */}
+      <div className="fixed top-16 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 z-40">
+        <div 
+          className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-150"
+          style={{ width: `${progress}%` }}
+        />
+      </div>
+
       <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {/* Back Button */}
         <button 
           onClick={onBack}
-          className={`mb-8 flex items-center gap-2 ${isDark ? 'text-pink-400 hover:text-pink-300' : 'text-pink-600 hover:text-pink-700'}`}
+          className={`mb-8 flex items-center gap-2 font-medium transition-colors ${isDark ? 'text-pink-400 hover:text-pink-300' : 'text-pink-600 hover:text-pink-700'}`}
         >
           ← Back to Blog
         </button>
-        <article className={`p-8 rounded-2xl ${isDark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
-          <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.published_date}</p>
-          <h1 className={`text-4xl font-bold mb-6 ${isDark ? 'text-white' : 'text-gray-900'}`}>{post.title}</h1>
-          <div className={`prose ${isDark ? 'prose-invert' : ''} max-w-none`}>
-            <p className={`text-lg leading-relaxed whitespace-pre-wrap ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-              {post.content}
-            </p>
+
+        <article className={`rounded-2xl overflow-hidden ${isDark ? 'bg-gray-800/50 backdrop-blur' : 'bg-white/80 backdrop-blur shadow-lg'}`}>
+          {/* Header Section */}
+          <div className={`p-8 md:p-12 border-b ${isDark ? 'border-gray-700' : 'border-pink-100'}`}>
+            {/* Meta Info */}
+            <div className="flex flex-wrap items-center gap-4 mb-6">
+              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                </svg>
+                {post.published_date}
+              </div>
+              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                </svg>
+                {readingTime} min read
+              </div>
+            </div>
+
+            {/* Title */}
+            <h1 className={`text-4xl md:text-5xl font-bold mb-6 leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              {post.title}
+            </h1>
+
+            {/* Excerpt */}
+            {post.excerpt && (
+              <p className={`text-xl leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                {post.excerpt}
+              </p>
+            )}
+          </div>
+
+          {/* Content Section */}
+          <div className="p-8 md:p-12">
+            <div className="prose prose-lg max-w-none">
+              {sections.map((section, index) => {
+                // Heading
+                if (section.type === 'heading') {
+                  return (
+                    <h2 
+                      key={index}
+                      className={`text-3xl font-bold mt-12 mb-6 first:mt-0 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                    >
+                      {section.content}
+                    </h2>
+                  );
+                }
+                
+                // Subheading
+                if (section.type === 'subheading') {
+                  return (
+                    <h3 
+                      key={index}
+                      className={`text-2xl font-bold mt-8 mb-4 ${isDark ? 'text-pink-400' : 'text-pink-600'}`}
+                    >
+                      {section.content}
+                    </h3>
+                  );
+                }
+                
+                // List
+                if (section.type === 'list') {
+                  return (
+                    <ul key={index} className={`space-y-3 my-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                      {section.content.map((item, i) => (
+                        <li key={i} className="flex items-start gap-3">
+                          <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDark ? 'bg-pink-400' : 'bg-pink-600'}`} />
+                          <span className="text-lg leading-relaxed">{item}</span>
+                        </li>
+                      ))}
+                    </ul>
+                  );
+                }
+                
+                // Quote
+                if (section.type === 'quote') {
+                  return (
+                    <blockquote 
+                      key={index}
+                      className={`border-l-4 pl-6 py-4 my-8 italic ${
+                        isDark 
+                          ? 'border-pink-500 bg-gray-700/30 text-gray-300' 
+                          : 'border-pink-600 bg-pink-50 text-gray-700'
+                      }`}
+                    >
+                      <p className="text-xl leading-relaxed">{section.content}</p>
+                    </blockquote>
+                  );
+                }
+                
+                // Code Block
+                if (section.type === 'code') {
+                  return (
+                    <pre 
+                      key={index}
+                      className={`p-6 rounded-xl my-6 overflow-x-auto ${
+                        isDark ? 'bg-gray-900 text-gray-300' : 'bg-gray-900 text-gray-300'
+                      }`}
+                    >
+                      <code className="text-sm font-mono">
+                        {section.content.join('\n')}
+                      </code>
+                    </pre>
+                  );
+                }
+                
+                // Paragraph
+                return (
+                  <p 
+                    key={index}
+                    className={`text-lg leading-relaxed mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                  >
+                    {section.content.join(' ')}
+                  </p>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Footer Section */}
+          <div className={`p-8 md:p-12 border-t ${isDark ? 'border-gray-700 bg-gray-800/30' : 'border-pink-100 bg-pink-50/50'}`}>
+            <div className="flex flex-wrap items-center justify-between gap-4">
+              {/* Like Counter */}
+              <div className="flex items-center gap-6">
+                <button
+                  onClick={handleLikeClick}
+                  disabled={hasLiked}
+                  className={`group flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
+                    hasLiked
+                      ? isDark
+                        ? 'bg-pink-500/20 cursor-not-allowed'
+                        : 'bg-pink-100 cursor-not-allowed'
+                      : isDark
+                      ? 'bg-gray-700 hover:bg-pink-500/20 hover:scale-105'
+                      : 'bg-white hover:bg-pink-50 hover:scale-105 shadow-md'
+                  }`}
+                >
+                  <svg 
+                    className={`w-6 h-6 transition-all ${
+                      hasLiked 
+                        ? 'text-pink-500 fill-current' 
+                        : isDark 
+                        ? 'text-gray-400 group-hover:text-pink-400' 
+                        : 'text-gray-600 group-hover:text-pink-600'
+                    }`} 
+                    fill={hasLiked ? "currentColor" : "none"}
+                    stroke="currentColor"
+                    strokeWidth="2"
+                    viewBox="0 0 24 24"
+                  >
+                    <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                  </svg>
+                  <div className="text-left">
+                    <div className={`text-2xl font-bold leading-none ${
+                      hasLiked
+                        ? 'text-pink-500'
+                        : isDark
+                        ? 'text-white'
+                        : 'text-gray-900'
+                    }`}>
+                      {likeCount}
+                    </div>
+                    <div className={`text-xs ${
+                      isDark ? 'text-gray-400' : 'text-gray-600'
+                    }`}>
+                      {likeCount === 1 ? 'Like' : 'Likes'}
+                    </div>
+                  </div>
+                </button>
+                
+                {hasLiked && (
+                  <p className={`text-sm ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>
+                    Thanks for your support! ❤️
+                  </p>
+                )}
+              </div>
+
+              {/* Read More Button */}
+              <button 
+                onClick={onBack}
+                className={`px-6 py-3 rounded-lg font-medium transition-all ${
+                  isDark 
+                    ? 'bg-pink-500 hover:bg-pink-600 text-white' 
+                    : 'bg-pink-600 hover:bg-pink-700 text-white'
+                }`}
+              >
+                Read More Posts
+              </button>
+            </div>
           </div>
         </article>
+        
+        {/* Like Modal */}
+        {showLikeModal && (
+          <LikeModal 
+            onClose={() => setShowLikeModal(false)}
+            onSubmit={handleLikeSubmit}
+            isDark={isDark}
+          />
+        )}
+        
+        {/* Toast Notification */}
+        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
       </div>
     </div>
   );
