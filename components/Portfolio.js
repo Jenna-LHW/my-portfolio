@@ -308,7 +308,7 @@ const ProfileSettings = ({ onSave }) => {
 // Analytics Dashboard
 const AnalyticsDashboard = () => {
   const { isDark } = useTheme();
-  const [stats, setStats] = useState({ skills: 0, experience: 0, education: 0, projects: 0, blog: 0 });
+  const [stats, setStats] = useState({ skills: 0, experience: 0, education: 0, projects: 0, blog: 0, likes: 0 });
 
   useEffect(() => {
     fetchStats();
@@ -316,25 +316,34 @@ const AnalyticsDashboard = () => {
 
   const fetchStats = async () => {
     try {
-      const [skills, experience, education, projects, blog] = await Promise.all([
+      const [skills, experience, education, projects, blog, likes] = await Promise.all([
         supabase.from('skills').select('*', { count: 'exact', head: true }),
         supabase.from('experience').select('*', { count: 'exact', head: true }),
         supabase.from('education').select('*', { count: 'exact', head: true }),
         supabase.from('projects').select('*', { count: 'exact', head: true }),
-        supabase.from('blog_posts').select('*', { count: 'exact', head: true })
+        supabase.from('blog_posts').select('*', { count: 'exact', head: true }),
+        supabase.from('blog_likes').select('*', { count: 'exact', head: true })
       ]);
-      setStats({ skills: skills.count || 0, experience: experience.count || 0, education: education.count || 0, projects: projects.count || 0, blog: blog.count || 0 });
+      setStats({ 
+        skills: skills.count || 0, 
+        experience: experience.count || 0, 
+        education: education.count || 0, 
+        projects: projects.count || 0, 
+        blog: blog.count || 0,
+        likes: likes.count || 0
+      });
     } catch (error) {
       console.error('Error:', error);
     }
   };
 
   const statCards = [
-    { label: 'Skills', value: stats.skills, color: 'from-blue-500 to-blue-600' },
-    { label: 'Experience', value: stats.experience, color: 'from-green-500 to-green-600' },
-    { label: 'Education', value: stats.education, color: 'from-yellow-500 to-yellow-600' },
-    { label: 'Projects', value: stats.projects, color: 'from-pink-500 to-pink-600' },
-    { label: 'Blog Posts', value: stats.blog, color: 'from-purple-500 to-purple-600' }
+    { label: 'Skills', value: stats.skills, color: 'from-blue-500 to-blue-600'},
+    { label: 'Experience', value: stats.experience, color: 'from-green-500 to-green-600'},
+    { label: 'Education', value: stats.education, color: 'from-yellow-500 to-yellow-600'},
+    { label: 'Projects', value: stats.projects, color: 'from-pink-500 to-pink-600'},
+    { label: 'Blog Posts', value: stats.blog, color: 'from-purple-500 to-purple-600'},
+    { label: 'Total Likes', value: stats.likes, color: 'from-red-500 to-red-600'}
   ];
 
   return (
@@ -342,9 +351,10 @@ const AnalyticsDashboard = () => {
       <h2 className={`text-2xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
         <BarChart3 className="inline w-6 h-6 mr-2" />Analytics Overview
       </h2>
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
         {statCards.map((stat, i) => (
-          <div key={i} className={`p-4 rounded-xl bg-gradient-to-br ${stat.color} text-white`}>
+          <div key={i} className={`p-4 rounded-xl bg-gradient-to-br ${stat.color} text-white shadow-lg hover:scale-105 transition-transform`}>
+            <div className="text-3xl mb-2">{stat.icon}</div>
             <div className="text-3xl font-bold">{stat.value}</div>
             <div className="text-sm opacity-90">{stat.label}</div>
           </div>
