@@ -1085,6 +1085,8 @@ const BlogPage = ({ onSelectPost }) => {
   const { isDark } = useTheme();
   const [posts, setPosts] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [featuredPost, setFeaturedPost] = useState(null);
+  const [regularPosts, setRegularPosts] = useState([]);
 
   useEffect(() => {
     fetchPosts();
@@ -1093,35 +1095,227 @@ const BlogPage = ({ onSelectPost }) => {
   const fetchPosts = async () => {
     try {
       const { data } = await supabase.from('blog_posts').select('*').order('published_date', { ascending: false });
+      if (data && data.length > 0) {
+        // Find the featured post (if any)
+        const featured = data.find(post => post.is_featured);
+        setFeaturedPost(featured || null);
+        
+        // Regular posts are all non-featured posts
+        setRegularPosts(data.filter(post => !post.is_featured));
+      }
       setPosts(data || []);
       setLoading(false);
     } catch (error) {
       setLoading(false);
     }
   };
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('en-US', { 
+      month: 'long', 
+      day: 'numeric', 
+      year: 'numeric' 
+    });
+  };
+
+  const calculateReadTime = (content) => {
+    if (!content) return 5;
+    const words = content.split(/\s+/).length;
+    return Math.ceil(words / 200);
+  };
   
   return (
     <div className={`min-h-screen pt-16 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-pink-50 via-white to-pink-100'}`}>
-      <div className="max-w-5xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        <h1 className={`text-4xl md:text-5xl font-bold mb-12 ${isDark ? 'text-white' : 'text-gray-900'}`}>Blog</h1>
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+        {/* Header Section */}
+        <div className="text-center mb-16">
+          <h1 className={`text-4xl md:text-6xl font-bold mb-4 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+            My Blog
+          </h1>
+          <p className={`text-lg md:text-xl ${isDark ? 'text-gray-400' : 'text-gray-600'} max-w-2xl mx-auto`}>
+            Thoughts, stories, and ideas about technology, design, and life
+          </p>
+        </div>
+
         {loading ? (
-          <div className="text-center py-12"><div className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Loading...</div></div>
-        ) : (
-          <div className="space-y-8">
-            {posts.map((post) => (
-              <article key={post.id} className={`p-8 rounded-2xl transition-all hover:scale-[1.02] ${isDark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
-                <p className={`text-sm mb-2 ${isDark ? 'text-gray-400' : 'text-gray-500'}`}>{post.published_date}</p>
-                <h2 className={`text-2xl font-bold mb-3 ${isDark ? 'text-white' : 'text-gray-900'}`}>{post.title}</h2>
-                <p className={`mb-4 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>{post.excerpt}</p>
-                <button 
-                  onClick={() => onSelectPost(post)}
-                  className={`inline-flex items-center font-medium ${isDark ? 'text-pink-400 hover:text-pink-300' : 'text-pink-600 hover:text-pink-700'}`}
-                >
-                  Read More →
-                </button>
-              </article>
-            ))}
+          <div className="text-center py-20">
+            <div className={`inline-block animate-spin rounded-full h-12 w-12 border-b-2 ${isDark ? 'border-pink-400' : 'border-pink-600'}`}></div>
+            <p className={`mt-4 text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Loading posts...</p>
           </div>
+        ) : posts.length === 0 ? (
+          <div className="text-center py-20">
+            <div className="text-6xl mb-4">📝</div>
+            <h3 className={`text-2xl font-bold mb-2 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+              No posts yet
+            </h3>
+            <p className={`text-lg ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+              Check back soon for new content!
+            </p>
+          </div>
+        ) : (
+          <>
+            {/* Featured Post */}
+            {featuredPost && (
+              <div className="mb-16">
+                <div 
+                  onClick={() => onSelectPost(featuredPost)}
+                  className={`relative rounded-3xl overflow-hidden cursor-pointer transition-all hover:scale-[1.01] group ${
+                    isDark ? 'bg-gray-800/50 backdrop-blur' : 'bg-white/80 backdrop-blur shadow-2xl'
+                  }`}
+                >
+                  {/* Featured Badge */}
+                  <div className="absolute top-6 left-6 z-10">
+                    <span className={`px-4 py-2 rounded-full text-xs font-bold ${
+                      isDark ? 'bg-pink-500 text-white' : 'bg-pink-600 text-white'
+                    } shadow-lg`}>
+                      ⭐ Pinned
+                    </span>
+                  </div>
+
+                  <div className="grid lg:grid-cols-2 gap-0">
+                    {/* Image Side */}
+                    <div className="relative h-80 lg:h-auto overflow-hidden">
+                      {featuredPost.image_url ? (
+                        <img 
+                          src={featuredPost.image_url} 
+                          alt={featuredPost.title}
+                          className="w-full h-full object-cover"
+                        />
+                      ) : (
+                        <div className={`w-full h-full ${
+                          isDark ? 'bg-gradient-to-br from-pink-500 to-purple-600' : 'bg-gradient-to-br from-pink-400 to-pink-600'
+                        } flex items-center justify-center`}>
+                          <svg className="w-24 h-24 text-white opacity-20" fill="currentColor" viewBox="0 0 20 20">
+                            <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                          </svg>
+                        </div>
+                      )}
+                    </div>
+
+                    {/* Content Side */}
+                    <div className="p-8 lg:p-12 flex flex-col justify-center">
+                      {/* Meta Info */}
+                      <div className="flex items-center gap-4 mb-6">
+                        <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                          </svg>
+                          {formatDate(featuredPost.published_date)}
+                        </div>
+                        <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                          <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                          </svg>
+                          {calculateReadTime(featuredPost.content)} min read
+                        </div>
+                      </div>
+
+                      <h2 className={`text-3xl lg:text-4xl font-bold mb-4 leading-tight ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}>
+                        {featuredPost.title}
+                      </h2>
+                      
+                      <p className={`text-lg mb-6 leading-relaxed line-clamp-3 ${
+                        isDark ? 'text-gray-300' : 'text-gray-600'
+                      }`}>
+                        {featuredPost.excerpt}
+                      </p>
+
+                      <button 
+                        className={`inline-flex items-center gap-2 px-6 py-3 rounded-lg font-medium transition-all group-hover:gap-3 ${
+                          isDark 
+                            ? 'bg-pink-500 hover:bg-pink-600 text-white' 
+                            : 'bg-pink-600 hover:bg-pink-700 text-white'
+                        }`}
+                      >
+                        Read Full Article
+                        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                          <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                        </svg>
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
+            {/* Regular Posts Grid */}
+            {regularPosts.length > 0 && (
+              <>
+                <h2 className={`text-2xl font-bold mb-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                  More Posts
+                </h2>
+                <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
+                  {regularPosts.map((post) => (
+                    <article 
+                      key={post.id} 
+                      onClick={() => onSelectPost(post)}
+                      className={`rounded-2xl overflow-hidden cursor-pointer transition-all hover:scale-[1.02] group ${
+                        isDark ? 'bg-gray-800/50 backdrop-blur' : 'bg-white/80 backdrop-blur shadow-lg'
+                      }`}
+                    >
+                      {/* Post Image/Icon */}
+                      <div className="relative h-80 lg:h-auto overflow-hidden">
+                        {regularPosts.image_url ? (
+                          <img 
+                            src={regularPosts.image_url} 
+                            alt={regularPosts.title}
+                            className="w-full h-full object-cover"
+                          />
+                        ) : (
+                          <div className={`w-full h-full ${
+                            isDark ? 'bg-gradient-to-br from-pink-500 to-purple-600' : 'bg-gradient-to-br from-pink-400 to-pink-600'
+                          } flex items-center justify-center`}>
+                            <svg className="w-24 h-24 text-white opacity-20" fill="currentColor" viewBox="0 0 20 20">
+                              <path d="M9 4.804A7.968 7.968 0 005.5 4c-1.255 0-2.443.29-3.5.804v10A7.969 7.969 0 015.5 14c1.669 0 3.218.51 4.5 1.385A7.962 7.962 0 0114.5 14c1.255 0 2.443.29 3.5.804v-10A7.968 7.968 0 0014.5 4c-1.255 0-2.443.29-3.5.804V12a1 1 0 11-2 0V4.804z" />
+                            </svg>
+                          </div>
+                        )}
+                      </div>
+
+                      
+
+                      {/* Post Content */}
+                      <div className="p-6">
+                        {/* Meta Info */}
+                        <div className="flex items-center gap-4 mb-3">
+                          <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {formatDate(post.published_date)}
+                          </span>
+                          <span className={`text-xs ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
+                            {calculateReadTime(post.content)} min read
+                          </span>
+                        </div>
+
+                        <h3 className={`text-xl font-bold mb-3 line-clamp-2 leading-tight ${
+                          isDark ? 'text-white' : 'text-gray-900'
+                        }`}>
+                          {post.title}
+                        </h3>
+                        
+                        <p className={`text-sm mb-4 line-clamp-3 leading-relaxed ${
+                          isDark ? 'text-gray-400' : 'text-gray-600'
+                        }`}>
+                          {post.excerpt}
+                        </p>
+
+                        <div className={`flex items-center gap-2 font-medium text-sm transition-all group-hover:gap-3 ${
+                          isDark ? 'text-pink-400' : 'text-pink-600'
+                        }`}>
+                          Read More
+                          <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 8l4 4m0 0l-4 4m4-4H3" />
+                          </svg>
+                        </div>
+                      </div>
+                    </article>
+                  ))}
+                </div>
+              </>
+            )}
+          </>
         )}
       </div>
     </div>
