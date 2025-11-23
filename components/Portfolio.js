@@ -1087,15 +1087,24 @@ const BlogPage = ({ onSelectPost }) => {
   const [loading, setLoading] = useState(true);
   const [featuredPost, setFeaturedPost] = useState(null);
   const [regularPosts, setRegularPosts] = useState([]);
+  const [sortFilter, setSortFilter] = useState('newest');
+  const [postLikeCounts, setPostLikeCounts] = useState({});
 
   useEffect(() => {
     fetchPosts();
   }, []);
 
+  useEffect(() => {
+    applySortFilter();
+  }, [sortFilter, posts, postLikeCounts]);
+
   const fetchPosts = async () => {
     try {
       const { data } = await supabase.from('blog_posts').select('*').order('published_date', { ascending: false });
       if (data && data.length > 0) {
+        // Fetch like counts for all posts
+        await fetchLikeCounts(data);
+        
         // Find the featured post (if any)
         const featured = data.find(post => post.is_featured);
         setFeaturedPost(featured || null);
@@ -1108,6 +1117,47 @@ const BlogPage = ({ onSelectPost }) => {
     } catch (error) {
       setLoading(false);
     }
+  };
+
+  const fetchLikeCounts = async (posts) => {
+    try {
+      const likeCounts = {};
+      
+      // Fetch like counts for each post
+      await Promise.all(
+        posts.map(async (post) => {
+          const { count } = await supabase
+            .from('blog_likes')
+            .select('*', { count: 'exact', head: true })
+            .eq('post_id', post.id);
+          
+          likeCounts[post.id] = count || 0;
+        })
+      );
+      
+      setPostLikeCounts(likeCounts);
+    } catch (error) {
+      console.error('Error fetching like counts:', error);
+    }
+  };
+
+  const applySortFilter = () => {
+    let sorted = [...posts.filter(post => !post.is_featured)];
+    
+    if (sortFilter === 'newest') {
+      sorted.sort((a, b) => new Date(b.published_date) - new Date(a.published_date));
+    } else if (sortFilter === 'oldest') {
+      sorted.sort((a, b) => new Date(a.published_date) - new Date(b.published_date));
+    } else if (sortFilter === 'most-liked') {
+      // Sort by actual like counts
+      sorted.sort((a, b) => {
+        const likesA = postLikeCounts[a.id] || 0;
+        const likesB = postLikeCounts[b.id] || 0;
+        return likesB - likesA; // Descending order (most likes first)
+      });
+    }
+    
+    setRegularPosts(sorted);
   };
 
   const formatDate = (dateString) => {
@@ -1244,9 +1294,54 @@ const BlogPage = ({ onSelectPost }) => {
             {/* Regular Posts Grid */}
             {regularPosts.length > 0 && (
               <>
-                <h2 className={`text-2xl font-bold mb-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>
-                  More Posts
-                </h2>
+                <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 mb-8">
+                  <h2 className={`text-2xl font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>
+                    More Posts
+                  </h2>
+                  
+                  {/* Filter Buttons */}
+                  <div className="flex gap-2 flex-wrap">
+                    <button
+                      onClick={() => setSortFilter('newest')}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                        sortFilter === 'newest'
+                          ? isDark ? 'bg-pink-500 text-white' : 'bg-pink-600 text-white'
+                          : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-pink-50 shadow-md'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 11l5-5m0 0l5 5m-5-5v12" />
+                      </svg>
+                      Newest First
+                    </button>
+                    <button
+                      onClick={() => setSortFilter('oldest')}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                        sortFilter === 'oldest'
+                          ? isDark ? 'bg-pink-500 text-white' : 'bg-pink-600 text-white'
+                          : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-pink-50 shadow-md'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 inline mr-1" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 13l-5 5m0 0l-5-5m5 5V6" />
+                      </svg>
+                      Oldest First
+                    </button>
+                    <button
+                      onClick={() => setSortFilter('most-liked')}
+                      className={`px-4 py-2 rounded-lg font-medium text-sm transition-all ${
+                        sortFilter === 'most-liked'
+                          ? isDark ? 'bg-pink-500 text-white' : 'bg-pink-600 text-white'
+                          : isDark ? 'bg-gray-800 text-gray-300 hover:bg-gray-700' : 'bg-white text-gray-700 hover:bg-pink-50 shadow-md'
+                      }`}
+                    >
+                      <svg className="w-4 h-4 inline mr-1" fill="currentColor" viewBox="0 0 20 20">
+                        <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                      </svg>
+                      Most Liked
+                    </button>
+                  </div>
+                </div>
                 <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-6">
                   {regularPosts.map((post) => (
                     <article 
@@ -1258,10 +1353,10 @@ const BlogPage = ({ onSelectPost }) => {
                     >
                       {/* Post Image/Icon */}
                       <div className="relative h-80 lg:h-auto overflow-hidden">
-                        {regularPosts.image_url ? (
+                        {post.image_url ? (
                           <img 
-                            src={regularPosts.image_url} 
-                            alt={regularPosts.title}
+                            src={post.image_url} 
+                            alt={post.title}
                             className="w-full h-full object-cover"
                           />
                         ) : (
@@ -1273,9 +1368,21 @@ const BlogPage = ({ onSelectPost }) => {
                             </svg>
                           </div>
                         )}
+                        
+                        {/* Like count badge */}
+                        {sortFilter === 'most-liked' && (
+                          <div className="absolute top-4 right-4">
+                            <span className={`px-3 py-1 rounded-full text-xs font-bold flex items-center gap-1 ${
+                              isDark ? 'bg-gray-900/80 text-pink-400' : 'bg-white/80 text-pink-600'
+                            }`}>
+                              <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                              </svg>
+                              {postLikeCounts[post.id] || 0}
+                            </span>
+                          </div>
+                        )}
                       </div>
-
-                      
 
                       {/* Post Content */}
                       <div className="p-6">
@@ -1602,6 +1709,16 @@ const BlogPostPage = ({ post, onBack }) => {
         </button>
 
         <article className={`rounded-2xl overflow-hidden ${isDark ? 'bg-gray-800/50 backdrop-blur' : 'bg-white/80 backdrop-blur shadow-lg'}`}>
+          {/* Featured Image */}
+          {post.image_url && (
+            <div className="w-full h-96 overflow-hidden">
+              <img 
+                src={post.image_url} 
+                alt={post.title}
+                className="w-full h-full object-cover"
+              />
+            </div>
+          )}
           {/* Header Section */}
           <div className={`p-8 md:p-12 border-b ${isDark ? 'border-gray-700' : 'border-pink-100'}`}>
             {/* Meta Info */}
@@ -2019,7 +2136,7 @@ const ContactPage = () => {
                   </div>
                   <div>
                     <h4 className={`font-medium mb-1 ${isDark ? 'text-gray-300' : 'text-gray-700'}`}>Location</h4>
-                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Port Louis, Mauritius</p>
+                    <p className={`text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>Tombeau Bay, Mauritius</p>
                   </div>
                 </div>
               </div>
@@ -2581,7 +2698,7 @@ const Footer = ({ profile, setCurrentPage }) => {
               © {currentYear} {profile?.name || 'Your Name'}. All rights reserved.
             </p>
             <p className={`text-sm ${isDark ? 'text-gray-500' : 'text-gray-600'}`}>
-              Built with Next.js, react & Supabase
+              Built with Next.js & Supabase
             </p>
           </div>
         </div>
@@ -2596,6 +2713,11 @@ const App = () => {
   const [selectedProject, setSelectedProject] = useState(null);
   const [profile, setProfile] = useState(null);
   const { user, loading, signOut, isAdmin } = useAuth();
+
+  // Scroll to top whenever page changes
+  useEffect(() => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [currentPage, selectedBlogPost, selectedProject]);
 
   // Load Bootstrap Icons
   useEffect(() => {
