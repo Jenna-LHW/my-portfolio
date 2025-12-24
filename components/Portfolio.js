@@ -671,17 +671,17 @@ const getSkillIcon = (skillName) => {
                   <div>
                     <h2 className={`text-3xl font-bold mb-8 ${isDark ? 'text-white' : 'text-gray-900'}`}>My skills</h2>
                     <div className={`rounded-2xl p-8 ${isDark ? 'bg-gray-800' : 'bg-white shadow-lg'}`}>
-                      <div className="space-y-8 max-h-[600px] overflow-y-auto pr-2" style={scrollbarStyle}>
+                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 max-h-[600px] overflow-y-auto pr-2" style={scrollbarStyle}>
                         {skills.map((skill) => (
-                          <div key={skill.id}>
-                            <div className="flex items-center gap-4 mb-3">
-                              <div className={`w-12 h-12 flex items-center justify-center rounded-lg ${isDark ? 'bg-gray-700' : 'bg-pink-50'}`}>
-                                <i className={`${getSkillIcon(skill.name)} text-2xl ${isDark ? 'text-pink-400' : 'text-pink-600'}`}></i>
+                          <div key={skill.id} className={`p-4 rounded-xl ${isDark ? 'bg-gray-700/50' : 'bg-pink-50/50'}`}>
+                            <div className="flex items-center gap-3 mb-3">
+                              <div className={`w-10 h-10 flex items-center justify-center rounded-lg ${isDark ? 'bg-gray-600' : 'bg-white'}`}>
+                                <i className={`${getSkillIcon(skill.name)} text-xl ${isDark ? 'text-pink-400' : 'text-pink-600'}`}></i>
                               </div>
-                              <h3 className={`text-lg font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{skill.name}</h3>
+                              <h3 className={`text-base font-bold ${isDark ? 'text-white' : 'text-gray-900'}`}>{skill.name}</h3>
                             </div>
                             <div className="relative">
-                              <div className={`h-3 rounded-full overflow-hidden ${isDark ? 'bg-gray-700' : 'bg-pink-100'}`}>
+                              <div className={`h-2.5 rounded-full overflow-hidden ${isDark ? 'bg-gray-600' : 'bg-pink-100'}`}>
                                 <div 
                                   className={`h-full rounded-full transition-all duration-1000 ${isDark ? 'bg-pink-500' : 'bg-pink-600'}`}
                                   style={{ width: `${getSkillPercentage(skill)}%` }}
