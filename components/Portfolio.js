@@ -1520,6 +1520,7 @@ const BlogPostPage = ({ post, onBack }) => {
   const [hasLiked, setHasLiked] = useState(false);
   const [showLikeModal, setShowLikeModal] = useState(false);
   const [toast, setToast] = useState(null);
+  const [showScrollTop, setShowScrollTop] = useState(false);
 
   useEffect(() => {
     // Calculate reading time (average 200 words per minute)
@@ -1534,6 +1535,7 @@ const BlogPostPage = ({ post, onBack }) => {
       const scrolled = window.scrollY;
       const progress = (scrolled / documentHeight) * 100;
       setProgress(progress);
+      setShowScrollTop(scrolled > 500);
     };
 
     window.addEventListener('scroll', handleScroll);
@@ -1688,70 +1690,159 @@ const BlogPostPage = ({ post, onBack }) => {
   };
 
   const sections = parseContent(post.content);
+
+  const scrollToTop = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
   
   return (
-    <div className={`min-h-screen pt-16 ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-pink-50 via-white to-pink-100'}`}>
-      {/* Reading Progress Bar */}
-      <div className="fixed top-16 left-0 right-0 h-1 bg-gray-200 dark:bg-gray-800 z-40">
-        <div 
-          className="h-full bg-gradient-to-r from-pink-500 to-purple-500 transition-all duration-150"
-          style={{ width: `${progress}%` }}
-        />
+  <div className={`min-h-screen ${isDark ? 'bg-gray-900' : 'bg-gradient-to-br from-pink-50 via-white to-pink-100'}`}>
+    {/* Reading Progress Bar */}
+    <div className="fixed top-0 left-0 right-0 h-1 bg-transparent z-50">
+      <div 
+        className="h-full bg-gradient-to-r from-pink-500 via-purple-500 to-pink-500 transition-all duration-150 shadow-lg shadow-pink-500/50"
+        style={{ width: `${progress}%` }}
+      />
+    </div>
+
+    {/* Floating Action Buttons */}
+    <div className="fixed bottom-8 right-8 z-40 flex flex-col gap-3">
+      {showScrollTop && (
+        <button
+          onClick={scrollToTop}
+          className={`w-12 h-12 rounded-full shadow-lg transition-all hover:scale-110 backdrop-blur-md ${
+            isDark 
+              ? 'bg-gray-800/90 hover:bg-gray-700 text-pink-400' 
+              : 'bg-white/90 hover:bg-pink-50 text-pink-600'
+          }`}
+        >
+          <svg className="w-6 h-6 mx-auto" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 10l7-7m0 0l7 7m-7-7v18" />
+          </svg>
+        </button>
+      )}
+    </div>
+
+    <div className="pt-16">
+      {/* Hero Section with Featured Image */}
+      <div className="relative">
+        {post.image_url ? (
+          <div className="relative h-[60vh] md:h-[70vh] overflow-hidden">
+            <div className="absolute inset-0 bg-gradient-to-b from-black/40 via-black/50 to-black/80" />
+            <img 
+              src={post.image_url} 
+              alt={post.title}
+              className="w-full h-full object-cover"
+            />
+            
+            {/* Overlay Content */}
+            <div className="absolute inset-0 flex items-end">
+              <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 pb-16 w-full">
+                {/* Back Button */}
+                <button 
+                  onClick={onBack}
+                  className={`mb-6 px-4 py-2 rounded-full backdrop-blur-md flex items-center gap-2 font-medium transition-all hover:scale-105 ${
+                    isDark 
+                      ? 'bg-gray-900/80 text-white hover:bg-gray-800/90' 
+                      : 'bg-white/80 text-gray-900 hover:bg-white/90'
+                  }`}
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                  </svg>
+                  Back to Blog
+                </button>
+
+                {/* Meta Info */}
+                <div className="flex flex-wrap items-center gap-4 mb-4">
+                  <div className="flex items-center gap-2 text-sm text-white/90 backdrop-blur-sm bg-black/20 px-3 py-1.5 rounded-full">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                    </svg>
+                    {post.published_date}
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-white/90 backdrop-blur-sm bg-black/20 px-3 py-1.5 rounded-full">
+                    <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    {readingTime} min read
+                  </div>
+                  <div className="flex items-center gap-2 text-sm text-white/90 backdrop-blur-sm bg-black/20 px-3 py-1.5 rounded-full">
+                    <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                      <path fillRule="evenodd" d="M3.172 5.172a4 4 0 015.656 0L10 6.343l1.172-1.171a4 4 0 115.656 5.656L10 17.657l-6.828-6.829a4 4 0 010-5.656z" clipRule="evenodd" />
+                    </svg>
+                    {likeCount} {likeCount === 1 ? 'like' : 'likes'}
+                  </div>
+                </div>
+
+                {/* Title */}
+                <h1 className="text-4xl md:text-6xl font-bold text-white leading-tight mb-4 drop-shadow-lg">
+                  {post.title}
+                </h1>
+
+                {/* Excerpt */}
+                {post.excerpt && (
+                  <p className="text-xl text-white/90 leading-relaxed max-w-3xl drop-shadow">
+                    {post.excerpt}
+                  </p>
+                )}
+              </div>
+            </div>
+          </div>
+        ) : (
+          // Fallback for posts without images
+          <div className={`${isDark ? 'bg-gradient-to-br from-pink-500 to-purple-600' : 'bg-gradient-to-br from-pink-400 to-pink-600'}`}>
+            <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
+              <button 
+                onClick={onBack}
+                className="mb-8 px-4 py-2 rounded-full backdrop-blur-md flex items-center gap-2 font-medium transition-all hover:scale-105 bg-white/20 text-white hover:bg-white/30"
+              >
+                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 19l-7-7 7-7" />
+                </svg>
+                Back to Blog
+              </button>
+
+              <div className="flex flex-wrap items-center gap-4 mb-6">
+                <div className="flex items-center gap-2 text-sm text-white/90 bg-white/20 px-3 py-1.5 rounded-full">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                  </svg>
+                  {post.published_date}
+                </div>
+                <div className="flex items-center gap-2 text-sm text-white/90 bg-white/20 px-3 py-1.5 rounded-full">
+                  <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
+                  </svg>
+                  {readingTime} min read
+                </div>
+              </div>
+
+              <h1 className="text-5xl md:text-6xl font-bold text-white leading-tight mb-6">
+                {post.title}
+              </h1>
+
+              {post.excerpt && (
+                <p className="text-xl text-white/90 leading-relaxed">
+                  {post.excerpt}
+                </p>
+              )}
+            </div>
+          </div>
+        )}
       </div>
 
-      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 py-20">
-        {/* Back Button */}
-        <button 
-          onClick={onBack}
-          className={`mb-8 flex items-center gap-2 font-medium transition-colors ${isDark ? 'text-pink-400 hover:text-pink-300' : 'text-pink-600 hover:text-pink-700'}`}
-        >
-          ← Back to Blog
-        </button>
+      {/* Content Section */}
+      <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8 -mt-12 relative z-10">
+        <article className={`rounded-3xl overflow-hidden shadow-2xl ${
+          isDark ? 'bg-gray-800/95 backdrop-blur' : 'bg-white/95 backdrop-blur'
+        }`}>
+          <div className="p-8 md:p-12 lg:p-16">
+            {/* Decorative Element */}
+            <div className={`w-20 h-1 rounded-full mb-12 ${
+              isDark ? 'bg-gradient-to-r from-pink-500 to-purple-500' : 'bg-gradient-to-r from-pink-600 to-purple-600'
+            }`} />
 
-        <article className={`rounded-2xl overflow-hidden ${isDark ? 'bg-gray-800/50 backdrop-blur' : 'bg-white/80 backdrop-blur shadow-lg'}`}>
-          {/* Featured Image */}
-          {post.image_url && (
-            <div className="w-full h-96 overflow-hidden">
-              <img 
-                src={post.image_url} 
-                alt={post.title}
-                className="w-full h-full object-cover"
-              />
-            </div>
-          )}
-          {/* Header Section */}
-          <div className={`p-8 md:p-12 border-b ${isDark ? 'border-gray-700' : 'border-pink-100'}`}>
-            {/* Meta Info */}
-            <div className="flex flex-wrap items-center gap-4 mb-6">
-              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
-                </svg>
-                {post.published_date}
-              </div>
-              <div className={`flex items-center gap-2 text-sm ${isDark ? 'text-gray-400' : 'text-gray-600'}`}>
-                <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z" />
-                </svg>
-                {readingTime} min read
-              </div>
-            </div>
-
-            {/* Title */}
-            <h1 className={`text-4xl md:text-5xl font-bold mb-6 leading-tight ${isDark ? 'text-white' : 'text-gray-900'}`}>
-              {post.title}
-            </h1>
-
-            {/* Excerpt */}
-            {post.excerpt && (
-              <p className={`text-xl leading-relaxed ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
-                {post.excerpt}
-              </p>
-            )}
-          </div>
-
-          {/* Content Section */}
-          <div className="p-8 md:p-12">
             <div className="prose prose-lg max-w-none">
               {sections.map((section, index) => {
                 // Heading
@@ -1759,9 +1850,15 @@ const BlogPostPage = ({ post, onBack }) => {
                   return (
                     <h2 
                       key={index}
-                      className={`text-3xl font-bold mt-12 mb-6 first:mt-0 ${isDark ? 'text-white' : 'text-gray-900'}`}
+                      className={`text-3xl md:text-4xl font-bold mt-16 mb-6 first:mt-0 ${
+                        isDark ? 'text-white' : 'text-gray-900'
+                      }`}
                     >
-                      {section.content}
+                      <span className={`inline-block border-l-4 pl-4 ${
+                        isDark ? 'border-pink-500' : 'border-pink-600'
+                      }`}>
+                        {section.content}
+                      </span>
                     </h2>
                   );
                 }
@@ -1771,7 +1868,9 @@ const BlogPostPage = ({ post, onBack }) => {
                   return (
                     <h3 
                       key={index}
-                      className={`text-2xl font-bold mt-8 mb-4 ${isDark ? 'text-pink-400' : 'text-pink-600'}`}
+                      className={`text-2xl md:text-3xl font-bold mt-12 mb-6 ${
+                        isDark ? 'text-pink-400' : 'text-pink-600'
+                      }`}
                     >
                       {section.content}
                     </h3>
@@ -1781,11 +1880,17 @@ const BlogPostPage = ({ post, onBack }) => {
                 // List
                 if (section.type === 'list') {
                   return (
-                    <ul key={index} className={`space-y-3 my-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}>
+                    <ul key={index} className="space-y-4 my-8">
                       {section.content.map((item, i) => (
-                        <li key={i} className="flex items-start gap-3">
-                          <span className={`mt-2 w-1.5 h-1.5 rounded-full flex-shrink-0 ${isDark ? 'bg-pink-400' : 'bg-pink-600'}`} />
-                          <span className="text-lg leading-relaxed">{item}</span>
+                        <li key={i} className="flex items-start gap-4">
+                          <span className={`mt-2 w-2 h-2 rounded-full flex-shrink-0 ${
+                            isDark ? 'bg-pink-400' : 'bg-pink-600'
+                          }`} />
+                          <span className={`text-lg leading-relaxed ${
+                            isDark ? 'text-gray-300' : 'text-gray-600'
+                          }`}>
+                            {item}
+                          </span>
                         </li>
                       ))}
                     </ul>
@@ -1797,13 +1902,26 @@ const BlogPostPage = ({ post, onBack }) => {
                   return (
                     <blockquote 
                       key={index}
-                      className={`border-l-4 pl-6 py-4 my-8 italic ${
+                      className={`relative border-l-4 pl-8 py-6 my-12 ${
                         isDark 
-                          ? 'border-pink-500 bg-gray-700/30 text-gray-300' 
-                          : 'border-pink-600 bg-pink-50 text-gray-700'
+                          ? 'border-pink-500 bg-gray-900/50' 
+                          : 'border-pink-600 bg-pink-50/80'
                       }`}
                     >
-                      <p className="text-xl leading-relaxed">{section.content}</p>
+                      <svg 
+                        className={`absolute top-4 left-4 w-8 h-8 opacity-20 ${
+                          isDark ? 'text-pink-400' : 'text-pink-600'
+                        }`}
+                        fill="currentColor" 
+                        viewBox="0 0 24 24"
+                      >
+                        <path d="M14.017 21v-7.391c0-5.704 3.731-9.57 8.983-10.609l.995 2.151c-2.432.917-3.995 3.638-3.995 5.849h4v10h-9.983zm-14.017 0v-7.391c0-5.704 3.748-9.57 9-10.609l.996 2.151c-2.433.917-3.996 3.638-3.996 5.849h3.983v10h-9.983z" />
+                      </svg>
+                      <p className={`text-xl md:text-2xl leading-relaxed italic font-medium ${
+                        isDark ? 'text-gray-200' : 'text-gray-800'
+                      }`}>
+                        {section.content}
+                      </p>
                     </blockquote>
                   );
                 }
@@ -1813,11 +1931,9 @@ const BlogPostPage = ({ post, onBack }) => {
                   return (
                     <pre 
                       key={index}
-                      className={`p-6 rounded-xl my-6 overflow-x-auto ${
-                        isDark ? 'bg-gray-900 text-gray-300' : 'bg-gray-900 text-gray-300'
-                      }`}
+                      className="p-6 md:p-8 rounded-2xl my-8 overflow-x-auto bg-gray-900 shadow-xl"
                     >
-                      <code className="text-sm font-mono">
+                      <code className="text-sm md:text-base font-mono text-gray-300">
                         {section.content.join('\n')}
                       </code>
                     </pre>
@@ -1828,7 +1944,9 @@ const BlogPostPage = ({ post, onBack }) => {
                 return (
                   <p 
                     key={index}
-                    className={`text-lg leading-relaxed mb-6 ${isDark ? 'text-gray-300' : 'text-gray-600'}`}
+                    className={`text-lg md:text-xl leading-relaxed mb-6 ${
+                      isDark ? 'text-gray-300' : 'text-gray-700'
+                    }`}
                   >
                     {section.content.join(' ')}
                   </p>
@@ -1837,31 +1955,39 @@ const BlogPostPage = ({ post, onBack }) => {
             </div>
           </div>
 
-          {/* Footer Section */}
-          <div className={`p-8 md:p-12 border-t ${isDark ? 'border-gray-700 bg-gray-800/30' : 'border-pink-100 bg-pink-50/50'}`}>
-            <div className="flex flex-wrap items-center justify-between gap-4">
-              {/* Like Counter */}
-              <div className="flex items-center gap-6">
-                <button
-                  onClick={handleLikeClick}
-                  disabled={hasLiked}
-                  className={`group flex items-center gap-3 px-6 py-3 rounded-full transition-all ${
-                    hasLiked
-                      ? isDark
-                        ? 'bg-pink-500/20 cursor-not-allowed'
-                        : 'bg-pink-100 cursor-not-allowed'
-                      : isDark
-                      ? 'bg-gray-700 hover:bg-pink-500/20 hover:scale-105'
-                      : 'bg-white hover:bg-pink-50 hover:scale-105 shadow-md'
-                  }`}
-                >
+          {/* Engagement Section */}
+          <div className={`px-8 md:px-12 lg:px-16 py-12 border-t ${
+            isDark 
+              ? 'border-gray-700 bg-gradient-to-b from-transparent to-gray-900/30' 
+              : 'border-pink-100 bg-gradient-to-b from-transparent to-pink-50/30'
+          }`}>
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+              {/* Like Button */}
+              <button
+                onClick={handleLikeClick}
+                disabled={hasLiked}
+                className={`group relative overflow-hidden px-8 py-4 rounded-2xl transition-all ${
+                  hasLiked
+                    ? isDark
+                      ? 'bg-pink-500/20 cursor-not-allowed'
+                      : 'bg-pink-100 cursor-not-allowed'
+                    : isDark
+                    ? 'bg-gray-800 hover:bg-pink-500/20 hover:scale-105 hover:shadow-lg hover:shadow-pink-500/20'
+                    : 'bg-white hover:bg-pink-50 hover:scale-105 hover:shadow-lg hover:shadow-pink-600/20 shadow-md'
+                }`}
+              >
+                {!hasLiked && (
+                  <div className="absolute inset-0 bg-gradient-to-r from-pink-500/0 via-pink-500/10 to-pink-500/0 translate-x-[-100%] group-hover:translate-x-[100%] transition-transform duration-1000" />
+                )}
+                
+                <div className="relative flex items-center gap-4">
                   <svg 
-                    className={`w-6 h-6 transition-all ${
+                    className={`w-8 h-8 transition-all ${
                       hasLiked 
-                        ? 'text-pink-500 fill-current' 
+                        ? 'text-pink-500 fill-current scale-110' 
                         : isDark 
-                        ? 'text-gray-400 group-hover:text-pink-400' 
-                        : 'text-gray-600 group-hover:text-pink-600'
+                        ? 'text-gray-400 group-hover:text-pink-400 group-hover:scale-110' 
+                        : 'text-gray-600 group-hover:text-pink-600 group-hover:scale-110'
                     }`} 
                     fill={hasLiked ? "currentColor" : "none"}
                     stroke="currentColor"
@@ -1871,7 +1997,7 @@ const BlogPostPage = ({ post, onBack }) => {
                     <path strokeLinecap="round" strokeLinejoin="round" d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
                   </svg>
                   <div className="text-left">
-                    <div className={`text-2xl font-bold leading-none ${
+                    <div className={`text-3xl font-bold leading-none ${
                       hasLiked
                         ? 'text-pink-500'
                         : isDark
@@ -1880,50 +2006,50 @@ const BlogPostPage = ({ post, onBack }) => {
                     }`}>
                       {likeCount}
                     </div>
-                    <div className={`text-xs ${
+                    <div className={`text-sm font-medium mt-1 ${
                       isDark ? 'text-gray-400' : 'text-gray-600'
                     }`}>
-                      {likeCount === 1 ? 'Like' : 'Likes'}
+                      {hasLiked ? 'You liked this!' : likeCount === 1 ? 'Like' : 'Likes'}
                     </div>
                   </div>
-                </button>
-                
-                {hasLiked && (
-                  <p className={`text-sm ${isDark ? 'text-pink-400' : 'text-pink-600'}`}>
-                    Thanks for your support! ❤️
-                  </p>
-                )}
-              </div>
-
-              {/* Read More Button */}
-              <button 
-                onClick={onBack}
-                className={`px-6 py-3 rounded-lg font-medium transition-all ${
-                  isDark 
-                    ? 'bg-pink-500 hover:bg-pink-600 text-white' 
-                    : 'bg-pink-600 hover:bg-pink-700 text-white'
-                }`}
-              >
-                Read More Posts
+                </div>
               </button>
+
+              {/* Share & More Posts */}
+              <div className="flex gap-3">
+                <button 
+                  onClick={onBack}
+                  className={`px-6 py-4 rounded-xl font-medium transition-all hover:scale-105 ${
+                    isDark 
+                      ? 'bg-pink-500 hover:bg-pink-600 text-white shadow-lg shadow-pink-500/30' 
+                      : 'bg-pink-600 hover:bg-pink-700 text-white shadow-lg shadow-pink-600/30'
+                  }`}
+                >
+                  More Posts
+                </button>
+              </div>
             </div>
           </div>
         </article>
-        
-        {/* Like Modal */}
-        {showLikeModal && (
-          <LikeModal 
-            onClose={() => setShowLikeModal(false)}
-            onSubmit={handleLikeSubmit}
-            isDark={isDark}
-          />
-        )}
-        
-        {/* Toast Notification */}
-        {toast && <Toast {...toast} onClose={() => setToast(null)} />}
       </div>
+
+      {/* Spacer */}
+      <div className="h-20" />
+      
+      {/* Like Modal */}
+      {showLikeModal && (
+        <LikeModal 
+          onClose={() => setShowLikeModal(false)}
+          onSubmit={handleLikeSubmit}
+          isDark={isDark}
+        />
+      )}
+      
+      {/* Toast Notification */}
+      {toast && <Toast {...toast} onClose={() => setToast(null)} />}
     </div>
-  );
+  </div>
+);
 };
 
 // Contact Page
